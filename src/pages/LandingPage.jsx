@@ -79,7 +79,7 @@ export default function LandingPage() {
               flexShrink: 0,
               boxShadow: '0 0 10px var(--color-accent-blue)'
             }} />
-            <span className="text-white font-bold tracking-widest">Connects instantly to MongoDB Atlas</span>
+            <span className="text-white font-bold tracking-widest">AuraOps give the power of AI to your Company Continuous Integration (CI) pipelines</span>
           </motion.div>
 
           <h1 style={{ fontSize: 'clamp(3rem, 8vw, 5.5rem)', fontWeight: 900, lineHeight: 1.05, marginBottom: '2rem', letterSpacing: '-0.02em' }}>
@@ -95,7 +95,7 @@ export default function LandingPage() {
             <Link to="/signup" className="btn btn-primary glow-purple" style={{ paddingInline: '2.5rem', paddingBlock: '1.2rem', fontSize: '1.1rem', borderRadius: '14px', fontWeight: 700 }}>
               Start Automating <ArrowRight size={20} />
             </Link>
-            <a href="https://github.com" className="btn btn-outline glass" style={{ paddingInline: '2rem', paddingBlock: '1.2rem', fontSize: '1.1rem', borderRadius: '14px', fontWeight: 600 }}>
+            <a href="https://github.com/Subiksha-Sierra/AuraOps/blob/main/README.md" className="btn btn-outline glass" style={{ paddingInline: '2rem', paddingBlock: '1.2rem', fontSize: '1.1rem', borderRadius: '14px', fontWeight: 600 }}>
               <GitBranch size={20} /> Read Documentation
             </a>
           </div>
@@ -143,10 +143,10 @@ export default function LandingPage() {
       <section style={{ maxWidth: '80rem', margin: '8rem auto 0', padding: '8rem 1.5rem', position: 'relative', zIndex: 10 }}>
         <div style={{ textAlign: 'center', marginBottom: '5rem' }}>
           <h2 className="text-4xl font-black mb-4">A complete platform ecosystem.</h2>
-          <p className="text-secondary text-lg max-w-2xl mx-auto">No hacks. Secure integrations with MongoDB, GitHub, and seamless authentications to power your CI pipelines directly.</p>
+          <p className="text-secondary text-lg max-w-2xl mx-auto">No hacks. Secure integrations, GitHub, and seamless authentications to power your CI pipelines directly.</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <FeatureCard delay={0} icon={<Server className="text-accent" />} title="Database Synchronized" desc="Your projects are stored safely in an integrated MongoDB Atlas distributed cluster, accessible via your dashboard." />
+          <FeatureCard delay={0} icon={<Server className="text-accent" />} title="Effective Project Management" desc="Effortlessly manage your projects with our intuitive dashboard and automated workflows." />
           <FeatureCard delay={0.2} icon={<Code2 className="text-blue-400" />} title="Instant Detection" desc="Webhooks listen to your CI/CD pipelines and trigger fixes the precise microsecond a build failure occurs." />
           <FeatureCard delay={0.4} icon={<Shield className="text-green" />} title="Safe AI Patches" desc="AI-generated fixes are provided as atomic PRs, allowing developers to review every change before they merge." />
         </div>

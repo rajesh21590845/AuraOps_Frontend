@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, RefreshCw, FolderOpen, GitPullRequest, Zap, LogOut } from 'lucide-react'
+import { Plus, RefreshCw, FolderOpen, GitPullRequest, Zap, LogOut, Trash2 } from 'lucide-react'
 import { useProjects } from '../context/ProjectContext'
 import { useAuth } from '../context/AuthContext'
 import Header from '../components/Header'
@@ -18,7 +18,8 @@ export default function DashboardPage() {
     stats, 
     loading, 
     fetchProjects, 
-    fetchProjectStats 
+    fetchProjectStats,
+    deleteProject 
   } = useProjects()
   
   const [addModalOpen, setAddModalOpen] = useState(false)
@@ -128,9 +129,21 @@ export default function DashboardPage() {
                       >
                         <div className="flex justify-between items-center">
                           <span className="font-medium">{project.name}</span>
-                          <span className={`badge ${project.condition === 'on_failure' ? 'badge-error' : 'badge-success'}`}>
-                            {project.condition === 'on_failure' ? 'Auto' : 'Active'}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className={`badge ${project.condition === 'on_failure' ? 'badge-error' : 'badge-success'}`}>
+                              {project.condition === 'on_failure' ? 'Auto' : 'Active'}
+                            </span>
+                            <button 
+                              onClick={(e) => { 
+                                e.stopPropagation(); 
+                                deleteProject(project._id); 
+                              }}
+                              className="text-muted hover:text-error transition-colors"
+                              title="Delete project"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
                         </div>
                         <p className="text-xs text-muted mt-1">{formatDate(project.createdAt)}</p>
                       </div>

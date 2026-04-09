@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useCallback } from 'react';
-import { getProjects, createProject as createProjectApi, getProjectStats } from '../services/api';
+import { getProjects, createProject as createProjectApi, getProjectStats, deleteProject as deleteProjectApi } from '../services/api';
 
 const ProjectContext = createContext(null);
 
@@ -53,6 +53,26 @@ export const ProjectProvider = ({ children }) => {
     }
   };
 
+  const deleteProject = async (id) => {
+    setLoading(true);
+    try {
+      await deleteProjectApi(id);
+      setProjects((prev) => prev.filter(project => project._id !== id));
+      if (selectedProject?._id === id) {
+        setSelectedProject(null);
+      }
+      return { success: true };
+    } catch (err) {
+      console.error('Failed to delete project:', err);
+      return { 
+        success: false, 
+        message: err.response?.data?.message || 'Failed to delete project' 
+      };
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <ProjectContext.Provider value={{ 
       projects, 
@@ -63,7 +83,8 @@ export const ProjectProvider = ({ children }) => {
       error, 
       fetchProjects, 
       fetchProjectStats,
-      addProject 
+      addProject,
+      deleteProject 
     }}>
       {children}
     </ProjectContext.Provider>
