@@ -77,7 +77,6 @@ export default function DashboardPage() {
               </button>
             </div>
           </div>
-
           {!selectedProject && !loading ? (
             <div className="card text-center py-12 glass">
               <FolderOpen size={48} className="text-muted mx-auto mb-4" />
@@ -120,7 +119,7 @@ export default function DashboardPage() {
                 <div className="flex-col gap-4">
                   <h3 className="text-sm font-bold uppercase tracking-widest text-muted mb-2">Your Projects</h3>
                   <div className="flex-col gap-2">
-                    {projects.map(project => (
+                    {projects?.map(project => (
                       <div 
                         key={project._id}
                         onClick={() => setSelectedProject(project)}

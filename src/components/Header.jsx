@@ -1,6 +1,5 @@
-import { motion } from 'framer-motion'
 import { Link, useNavigate } from 'react-router-dom'
-import { Bell, LogOut, Settings, User, HelpCircle, Zap } from 'lucide-react'
+import { Bell, LogOut, HelpCircle, Zap, User } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 
 export default function Header() {
@@ -12,39 +11,67 @@ export default function Header() {
     navigate('/')
   }
 
+  const displayName = user?.name || (user?.email ? user.email.split('@')[0] : 'User')
+  const initials = displayName
+    .split(' ')
+    .map(n => n[0])
+    .join('')
+    .toUpperCase() || 'AU'
+
   return (
-    <header className="nav px-4">
-      <div className="max-w-7xl mx-auto h-full flex items-center justify-between">
-        <Link to="/dashboard" className="flex items-center gap-2" style={{ textDecoration: 'none' }}>
-          <div className="w-8 h-8 rounded bg-accent flex items-center justify-center">
-            <Zap size={18} color="white" fill="white" />
+    <header className="sticky top-0 z-50 backdrop-blur-xl bg-black/40 border-b border-white/10">
+      <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+
+        {/* Logo */}
+        <Link to="/dashboard" className="flex items-center gap-2">
+          <div className="w-9 h-9 rounded-lg bg-accent flex items-center justify-center shadow-lg">
+            <Zap size={18} color="white" />
           </div>
-          <span className="text-xl font-bold text-gradient">AuraOps</span>
+          <span className="text-lg font-bold text-gradient">AuraOps</span>
         </Link>
 
-        <div className="flex items-center gap-6">
-          <div className="hidden sm:flex items-center gap-4">
-            <button className="text-secondary hover:text-white transition" aria-label="Notifications">
-              <Bell size={20} />
+        {/* Right Section */}
+        <div className="flex items-center gap-4">
+
+          {/* Icons */}
+          <div className="hidden sm:flex items-center gap-3">
+            <button className="p-2 rounded-lg hover:bg-white/10 transition text-white/70 hover:text-white">
+              <Bell size={18} />
             </button>
-            <button className="text-secondary hover:text-white transition" aria-label="Help">
-              <HelpCircle size={20} />
+
+            <button className="p-2 rounded-lg hover:bg-white/10 transition text-white/70 hover:text-white">
+              <HelpCircle size={18} />
             </button>
           </div>
 
-          <div style={{ width: '1px', height: '20px', background: 'var(--color-border)' }}></div>
+          {/* Divider */}
+          <div className="w-px h-6 bg-white/10" />
 
+          {/* User */}
           <div className="flex items-center gap-3">
-            <div className="flex-col items-end hidden md:flex">
-              <span className="text-sm font-medium">{user?.name || 'Admin User'}</span>
-              <span className="text-xs text-muted">{user?.email || 'admin@auraops.dev'}</span>
+
+            {/* Avatar */}
+            <div className="w-9 h-9 rounded-full bg-white/10 border border-white/10 flex items-center justify-center text-sm font-bold text-white">
+              {initials}
             </div>
+
+            {/* Name */}
+            <div className="hidden md:flex flex-col leading-tight">
+              <span className="text-sm font-semibold text-white/90">
+                {displayName}
+              </span>
+              <span className="text-xs text-white/50">
+                {user?.email || 'admin@auraops.dev'}
+              </span>
+            </div>
+
+            {/* Logout */}
             <button
               onClick={handleLogout}
-              className="btn btn-outline p-2"
+              className="p-2 rounded-lg hover:bg-red-500/10 transition text-white/70 hover:text-red-400"
               title="Logout"
             >
-              <LogOut size={18} className="text-red" />
+              <LogOut size={18} />
             </button>
           </div>
         </div>
