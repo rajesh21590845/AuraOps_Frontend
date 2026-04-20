@@ -16,9 +16,13 @@ export default function DashboardPage() {
     selectedProject, 
     setSelectedProject, 
     stats, 
+    summary,
+    recentPRs,
     loading, 
     fetchProjects, 
     fetchProjectStats,
+    fetchDashboardSummary,
+    fetchDashboardPullRequests,
     deleteProject 
   } = useProjects()
   
@@ -26,7 +30,9 @@ export default function DashboardPage() {
 
   useEffect(() => {
     fetchProjects()
-  }, [fetchProjects])
+    fetchDashboardSummary()
+    fetchDashboardPullRequests()
+  }, [fetchProjects, fetchDashboardSummary, fetchDashboardPullRequests])
 
   useEffect(() => {
     if (selectedProject?._id) {
@@ -88,7 +94,46 @@ export default function DashboardPage() {
             </div>
           ) : (
             <div className="flex-col gap-8">
-              {/* Stats Section */}
+              {/* User Summary */}
+              <section className="mb-8">
+                <div className="flex items-center gap-2 mb-4">
+                  <Zap size={18} className="text-accent" />
+                  <h2 className="text-lg font-bold uppercase tracking-wider text-secondary">
+                    Account Summary
+                  </h2>
+                </div>
+                <div className="stats-grid">
+                  {summary ? (
+                    [
+                      { label: 'Projects', value: summary.projectCount },
+                      { label: 'Your PRs', value: summary.pullRequestCount },
+                      { label: 'Project PRs', value: summary.projectPullRequestCount },
+                    ].map((card) => (
+                      <div key={card.label} className="stat-card">
+                        <div className="flex justify-between items-start mb-4">
+                          <div className="badge badge-info" style={{ padding: '0.5rem', borderRadius: '8px' }}>
+                            <Zap size={20} />
+                          </div>
+                        </div>
+                        <h3 className="text-2xl font-bold">{card.value ?? '—'}</h3>
+                        <p className="text-secondary text-sm font-medium uppercase tracking-wider mt-1">{card.label}</p>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="grid grid-cols-3 gap-4">
+                      {[1, 2, 3].map((item) => (
+                        <div key={item} className="stat-card" style={{ animation: 'pulse 1.5s infinite' }}>
+                          <div style={{ height: '24px', width: '24px', background: 'var(--color-border)', borderRadius: '6px', marginBottom: '1rem' }} />
+                          <div style={{ height: '32px', width: '60%', background: 'var(--color-border)', borderRadius: '6px', marginBottom: '0.5rem' }} />
+                          <div style={{ height: '14px', width: '40%', background: 'var(--color-border)', borderRadius: '6px' }} />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </section>
+
+              {/* Project Stats */}
               <section>
                 <div className="flex items-center gap-2 mb-4">
                   <Zap size={18} className="text-accent" />
@@ -111,7 +156,7 @@ export default function DashboardPage() {
                       </div>
                       <button className="text-accent text-sm font-medium hover:underline">View All</button>
                     </div>
-                    <RecentPRList prs={stats?.recentPRs || []} loading={loading} />
+                    <RecentPRList prs={recentPRs.length > 0 ? recentPRs : stats?.recentPRs || []} loading={loading} />
                   </div>
                 </div>
 

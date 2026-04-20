@@ -1,5 +1,13 @@
 import { createContext, useContext, useState, useCallback } from 'react';
-import { getProjects, createProject as createProjectApi, getProjectStats, deleteProject as deleteProjectApi } from '../services/api';
+import {
+  getProjects,
+  getProjectStats,
+  getDashboardPullRequests,
+  getUserSummary,
+  getUserIdFromToken,
+  deleteProject as deleteProjectApi,
+  createProject as createProjectApi,
+} from '../services/api';
 
 const ProjectContext = createContext(null);
 
@@ -7,6 +15,8 @@ export const ProjectProvider = ({ children }) => {
   const [projects, setProjects] = useState([]);
   const [selectedProject, setSelectedProject] = useState(null);
   const [stats, setStats] = useState(null);
+  const [summary, setSummary] = useState(null);
+  const [recentPRs, setRecentPRs] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -31,6 +41,36 @@ export const ProjectProvider = ({ children }) => {
       setStats(response.data);
     } catch (err) {
       console.error('Failed to fetch stats:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const fetchDashboardSummary = useCallback(async () => {
+    const userId = getUserIdFromToken();
+    if (!userId) return;
+
+    setLoading(true);
+    try {
+      const response = await getUserSummary(userId);
+      setSummary(response.data);
+    } catch (err) {
+      console.error('Failed to fetch dashboard summary:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const fetchDashboardPullRequests = useCallback(async () => {
+    const userId = getUserIdFromToken();
+    if (!userId) return;
+
+    setLoading(true);
+    try {
+      const response = await getDashboardPullRequests(userId);
+      setRecentPRs(response.data);
+    } catch (err) {
+      console.error('Failed to fetch dashboard pull requests:', err);
     } finally {
       setLoading(false);
     }
@@ -79,10 +119,14 @@ export const ProjectProvider = ({ children }) => {
       selectedProject, 
       setSelectedProject, 
       stats, 
+      summary,
+      recentPRs,
       loading, 
       error, 
       fetchProjects, 
       fetchProjectStats,
+      fetchDashboardSummary,
+      fetchDashboardPullRequests,
       addProject,
       deleteProject 
     }}>
