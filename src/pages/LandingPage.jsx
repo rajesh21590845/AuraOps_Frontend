@@ -287,7 +287,7 @@ function TerminalSimulation() {
       {step >= 2 && (
         <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="ml-4 pl-4 border-l-2" style={{ borderColor: '#27272a', paddingBlock: '8px' }}>
            <span className="text-red">TypeError: Cannot read properties of undefined (reading 'config')</span><br/>
-           <span className="text-muted">    at Server.initialize (server.js:42:15)</span><br/>
+           <span className="text-muted">    at AgentRuntime.initialize (runtime.js:42:15)</span><br/>
            <span className="text-muted">    at runApp (app.js:10:5)</span>
         </motion.div>
       )}

@@ -39,7 +39,7 @@ export default function ProjectDetailPage() {
           name: p.name || '',
           githubPat: '', // Don't show the PAT
           condition: p.condition || 'on_failure',
-          repoUrl: p.repoUrl || '',
+          repoUrl: p.repoUrl || p.repositoryUrl || '',
         })
         setLoading(false)
       } catch (err) {

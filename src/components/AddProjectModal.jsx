@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useForm } from '../hooks/useForm'
 import { Modal } from './Modal'
 import { useProjects } from '../context/ProjectContext'
-import { FolderPlus, GitBranch, Key, Settings2 } from 'lucide-react'
+import { FolderPlus, GitBranch, Key, Settings2, Text, Workflow } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 const CONDITIONS = [
@@ -12,15 +12,27 @@ const CONDITIONS = [
   { value: 'manual',       label: '⚙️ Manual Trigger Only' },
 ]
 
-export default function AddProjectModal({ isOpen, onClose }) {
+const ENVIRONMENTS = [
+  { value: 'development', label: 'Development' },
+  { value: 'staging', label: 'Staging' },
+  { value: 'production', label: 'Production' },
+]
+
+export default function AddProjectModal({ isOpen, onClose, onCreated }) {
   const { addProject } = useProjects()
   const [loading, setLoading] = useState(false)
 
   const { values, errors, handleChange, handleSubmit, reset } = useForm(
-    { name: '', githubPat: '', condition: 'on_failure', repoUrl: '' },
+    {
+      name: '',
+      description: '',
+      environment: 'production',
+      githubPat: '',
+      condition: 'on_failure',
+      repoUrl: '',
+    },
     {
       name: (v) => v.trim().length < 2 ? 'Project name must be at least 2 characters' : null,
-      githubPat: (v) => v.trim().length < 10 ? 'GitHub PAT is required' : null,
     }
   )
 
@@ -28,16 +40,20 @@ export default function AddProjectModal({ isOpen, onClose }) {
     setLoading(true)
     const result = await addProject(data)
     if (result.success) {
-      toast.success('Project added successfully! 🎉')
       reset()
       onClose()
+      onCreated?.(result.data)
+      toast.success('Project added successfully!')
     } else {
       toast.error(result.message)
     }
     setLoading(false)
   }
 
-  const handleClose = () => { reset(); onClose() }
+  const handleClose = () => {
+    reset()
+    onClose()
+  }
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title="Add New Project">
@@ -57,6 +73,41 @@ export default function AddProjectModal({ isOpen, onClose }) {
               />
             </div>
             {errors.name && <p className="text-red text-sm mt-1">{errors.name}</p>}
+          </div>
+
+          <div className="w-full">
+            <label className="label" htmlFor="proj-description">Description</label>
+            <div style={{ position: 'relative' }}>
+              <Text size={16} className="text-muted" style={{ position: 'absolute', left: '12px', top: '16px' }} />
+              <textarea
+                id="proj-description"
+                className="input"
+                style={{ paddingLeft: '40px', minHeight: '96px', resize: 'vertical' }}
+                placeholder="Handles all transactions and billing"
+                value={values.description}
+                onChange={handleChange('description')}
+              />
+            </div>
+          </div>
+
+          <div className="w-full">
+            <label className="label" htmlFor="proj-environment">Environment</label>
+            <div style={{ position: 'relative' }}>
+              <Workflow size={16} className="text-muted" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
+              <select
+                id="proj-environment"
+                className="input"
+                style={{ paddingLeft: '40px' }}
+                value={values.environment}
+                onChange={handleChange('environment')}
+              >
+                {ENVIRONMENTS.map((environment) => (
+                  <option key={environment.value} value={environment.value}>
+                    {environment.label}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           <div className="w-full">
@@ -88,8 +139,7 @@ export default function AddProjectModal({ isOpen, onClose }) {
                 onChange={handleChange('githubPat')}
               />
             </div>
-            {errors.githubPat && <p className="text-red text-sm mt-1">{errors.githubPat}</p>}
-            <p className="text-xs text-muted mt-1">Needs repo, workflow, pull_request scopes</p>
+            <p className="text-xs text-muted mt-1">Optional. If provided, it should include repo, workflow, and pull_request scopes.</p>
           </div>
 
           <div className="w-full">

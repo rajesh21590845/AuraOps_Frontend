@@ -1,147 +1,155 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { motion, AnimatePresence } from 'framer-motion'
-import { Zap, Mail, Lock, User, ArrowRight, GitBranch } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
-import toast from 'react-hot-toast'
+import { useNavigate } from 'react-router-dom'
 import { useForm } from '../hooks/useForm'
+import toast from 'react-hot-toast'
 
 export default function SignupPage() {
-  const { signup } = useAuth()
+  const { signup, verifyOtp, otpRequired, loading } = useAuth()
   const navigate = useNavigate()
-  const [loading, setLoading] = useState(false)
-  const [githubLoading, setGithubLoading] = useState(false)
+
+  const [otp, setOtp] = useState('')
 
   const { values, errors, handleChange, handleSubmit } = useForm(
     { name: '', email: '', password: '', confirmPassword: '' },
     {
-      name: (v) => v.length < 2 ? 'Name is too short' : null,
-      email: (v) => !/\S+@\S+\.\S+/.test(v) ? 'Invalid email format' : null,
-      password: (v) => v.length < 6 ? 'Password must be at least 6 characters' : null,
-      confirmPassword: (v, all) => v !== all.password ? 'Passwords do not match' : null
+      name: (v) => !v.trim() ? 'Name is required' : v.trim().length < 2 ? 'Name must be at least 2 characters' : null,
+      email: (v) => !v.trim() ? 'Email is required' : !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ? 'Please enter a valid email address' : null,
+      password: (v) => !v ? 'Password is required' : v.length < 8 ? 'Password must be at least 8 characters' : !/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(v) ? 'Password must contain at least one uppercase letter, one lowercase letter, and one number' : null,
+      confirmPassword: (v, all) => !v ? 'Please confirm your password' : v !== all.password ? 'Passwords do not match' : null,
     }
   )
 
-  const onSubmit = async (data) => {
-    setLoading(true)
-    const result = await signup(data)
-    if (result.success) {
-      toast.success('Account created! Welcome to AuraOps.')
-      navigate('/dashboard')
+  const handleSignup = async (data) => {
+    const res = await signup(data)
+    if (res.success) {
+      toast.success('OTP sent to your email')
     } else {
-      toast.error(result.message)
+      toast.error(res.message)
     }
-    setLoading(false)
   }
 
-  const handleGithubAuth = () => {
-    setGithubLoading(true)
-    setTimeout(() => {
-      setGithubLoading(false)
-      toast.error('GitHub API keys not configured. Please use Email/Password.')
-    }, 2000)
+  // STEP 2 → VERIFY OTP
+  const handleVerifyOtp = async () => {
+    if (!otp.trim() || otp.length < 6) {
+      toast.error('Please enter a valid 6-digit OTP')
+      return
+    }
+
+    const res = await verifyOtp(otp)
+    if (res.success) {
+      if (res.metaError) {
+        toast.success('Signup successful!')
+        toast.error(res.metaError)
+      } else {
+        toast.success('Signup successful!')
+      }
+      navigate('/dashboard')
+    } else {
+      toast.error(res.message)
+    }
   }
 
   return (
-    <div className="bg-grid min-h-screen" style={{ padding: '3rem 1rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ type: "spring", stiffness: 300, damping: 25 }}
-        className="card glass w-full max-w-md relative overflow-hidden mt-8"
-        style={{ padding: '2.5rem 2rem', borderTop: '4px solid var(--color-accent-purple)' }}
-      >
-        <div className="flex flex-col items-center mb-8 text-center relative z-10">
-          <Link to="/" className="flex items-center gap-2 mb-4 hover:scale-110 transition-transform">
-            <div className="w-12 h-12 rounded bg-accent flex items-center justify-center shadow-lg" style={{ boxShadow: '0 0 25px rgba(124, 58, 237, 0.5)' }}>
-              <Zap size={24} color="white" fill="white" />
+    <div className="flex justify-center items-center h-screen">
+      {!otpRequired ? (
+        // ---------------- FORM ----------------
+        <div className="w-96 p-6 shadow rounded">
+          <h2 className="text-xl mb-4">Create Account</h2>
+
+          <form onSubmit={handleSubmit(handleSignup)}>
+            <div className="space-y-4">
+              <div>
+                <label className="label" htmlFor="signup-name">Full Name</label>
+                <input
+                  id="signup-name"
+                  type="text"
+                  placeholder="John Doe"
+                  value={values.name}
+                  onChange={handleChange('name')}
+                  className="input"
+                />
+                {errors.name && <p className="text-red text-xs mt-1">{errors.name}</p>}
+              </div>
+
+              <div>
+                <label className="label" htmlFor="signup-email">Email Address</label>
+                <input
+                  id="signup-email"
+                  type="email"
+                  placeholder="john@example.com"
+                  value={values.email}
+                  onChange={handleChange('email')}
+                  className="input"
+                />
+                {errors.email && <p className="text-red text-xs mt-1">{errors.email}</p>}
+              </div>
+
+              <div>
+                <label className="label" htmlFor="signup-password">Password</label>
+                <input
+                  id="signup-password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={values.password}
+                  onChange={handleChange('password')}
+                  className="input"
+                />
+                {errors.password && <p className="text-red text-xs mt-1">{errors.password}</p>}
+              </div>
+
+              <div>
+                <label className="label" htmlFor="signup-confirm-password">Confirm Password</label>
+                <input
+                  id="signup-confirm-password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={values.confirmPassword}
+                  onChange={handleChange('confirmPassword')}
+                  className="input"
+                />
+                {errors.confirmPassword && <p className="text-red text-xs mt-1">{errors.confirmPassword}</p>}
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="btn btn-primary w-full"
+              >
+                {loading ? 'Sending OTP...' : 'Sign Up'}
+              </button>
             </div>
-          </Link>
-          <h1 className="text-3xl font-black mb-1">Create Account</h1>
-          <p className="text-secondary text-sm">Join thousands of developers using AuraOps</p>
+          </form>
         </div>
+      ) : (
+        // ---------------- OTP ----------------
+        <div className="w-96 p-6 shadow rounded">
+          <h2 className="text-xl mb-4">Verify OTP</h2>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="flex-col gap-4 relative z-10">
-          <div className="w-full">
-            <label className="label" htmlFor="name">Full Name</label>
-            <div style={{ position: 'relative' }}>
-              <User size={18} className="text-muted" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
+          <div className="space-y-4">
+            <div>
+              <label className="label" htmlFor="signup-otp">Enter 6-digit OTP</label>
               <input
-                id="name"
-                className="input"
-                style={{ paddingLeft: '40px' }}
-                placeholder="John Doe"
-                value={values.name}
-                onChange={handleChange('name')}
+                id="signup-otp"
+                type="text"
+                placeholder="123456"
+                value={otp}
+                onChange={(e) => setOtp(e.target.value)}
+                maxLength={6}
+                className="input text-center text-lg font-mono tracking-widest"
               />
             </div>
-            {errors.name && <p className="text-red text-xs mt-1">{errors.name}</p>}
+
+            <button
+              onClick={handleVerifyOtp}
+              disabled={loading}
+              className="btn btn-primary w-full"
+            >
+              {loading ? 'Verifying...' : 'Verify & Continue'}
+            </button>
           </div>
-
-          <div className="w-full">
-            <label className="label" htmlFor="email">Email Address</label>
-            <div style={{ position: 'relative' }}>
-              <Mail size={18} className="text-muted" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
-              <input
-                id="email"
-                type="email"
-                className="input"
-                style={{ paddingLeft: '40px' }}
-                placeholder="name@company.com"
-                value={values.email}
-                onChange={handleChange('email')}
-              />
-            </div>
-            {errors.email && <p className="text-red text-xs mt-1">{errors.email}</p>}
-          </div>
-
-          <div className="w-full">
-            <label className="label" htmlFor="password">Password</label>
-            <div style={{ position: 'relative' }}>
-              <Lock size={18} className="text-muted" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
-              <input
-                id="password"
-                type="password"
-                className="input"
-                style={{ paddingLeft: '40px' }}
-                placeholder="••••••••"
-                value={values.password}
-                onChange={handleChange('password')}
-              />
-            </div>
-            {errors.password && <p className="text-red text-xs mt-1">{errors.password}</p>}
-          </div>
-
-          <div className="w-full">
-            <label className="label" htmlFor="confirmPassword">Confirm Password</label>
-            <div style={{ position: 'relative' }}>
-              <Lock size={18} className="text-muted" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
-              <input
-                id="confirmPassword"
-                type="password"
-                className="input"
-                style={{ paddingLeft: '40px' }}
-                placeholder="••••••••"
-                value={values.confirmPassword}
-                onChange={handleChange('confirmPassword')}
-              />
-            </div>
-            {errors.confirmPassword && <p className="text-red text-xs mt-1">{errors.confirmPassword}</p>}
-          </div>
-
-          <button 
-            type="submit" 
-            className="btn btn-primary w-full py-3 text-base font-bold flex items-center justify-center gap-2 mt-4" 
-            disabled={loading}
-          >
-            {loading ? <div className="spinner" style={{ width: '20px', height: '20px' }}></div> : <><span style={{ marginRight: '4px' }}>Create Account</span> <ArrowRight size={18} /></>}
-          </button>
-
-          <p className="text-center text-sm text-secondary mt-6 mb-2">
-            Already have an account? <Link to="/login" className="text-accent font-bold hover:underline">Sign In</Link>
-          </p>
-        </form>
-      </motion.div>
+        </div>
+      )}
     </div>
   )
 }

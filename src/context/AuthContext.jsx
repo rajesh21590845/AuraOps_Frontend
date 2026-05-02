@@ -1,146 +1,245 @@
-import { createContext, useContext, useState, useEffect } from 'react';
-import { loginUser as loginApi, registerUser as registerApi, verifyOtp as verifyOtpApi } from '../services/api';
+import { createContext, useContext, useEffect, useState } from 'react';
+import {
+  clearAuthStorage,
+  extractAuthTokens,
+  getMeta,
+  getStoredAccessToken,
+  getStoredRefreshToken,
+  getUserIdFromToken,
+  loginUser,
+  registerUser,
+  storeAuthTokens,
+  verifyOtp as verifyOtpApi,
+} from '../services/api';
 
 const AuthContext = createContext(null);
 
+const readStoredJson = (key) => {
+  try {
+    const value = localStorage.getItem(key);
+    return value ? JSON.parse(value) : null;
+  } catch {
+    return null;
+  }
+};
+
 export const AuthProvider = ({ children }) => {
-  const [token, setToken] = useState(localStorage.getItem('auraops_token') || null);
-  const [user, setUser] = useState(() => {
-    try {
-      const stored = localStorage.getItem('auraops_user');
-      return stored ? JSON.parse(stored) : null;
-    } catch {
-      localStorage.removeItem('auraops_user');
-      return null;
-    }
-  });
+  const [token, setToken] = useState(getStoredAccessToken() || null);
+  const [refreshToken, setRefreshToken] = useState(getStoredRefreshToken() || null);
+  const [user, setUser] = useState(readStoredJson('auraops_user'));
+  const [meta, setMeta] = useState(readStoredJson('auraops_meta'));
   const [loading, setLoading] = useState(false);
 
-  // Track if OTP is required
   const [otpRequired, setOtpRequired] = useState(false);
-  const [pendingUser, setPendingUser] = useState(null); // store user waiting for OTP
+  const [pendingUser, setPendingUser] = useState(null);
 
-  // ------------------- LOGIN -------------------
-  const login = async (credentials) => {
-    setLoading(true);
-    try {
-      const response = await loginApi(credentials);
-
-      if (!response.data.token) {
-        // Backend says "please verify your account"
-        setPendingUser({ email: credentials.email });
-        setOtpRequired(true);
-        return { success: false, otpRequired: true };
-      }
-
-      const token = response.data.token;
-      const userToSave = { 
-        email: response.data.email || credentials.email, 
-        name: response.data.name || null 
-      };
-
-      setToken(token);
-      setUser(userToSave);
-      localStorage.setItem('auraops_token', token);
-      localStorage.setItem('auraops_user', JSON.stringify(userToSave));
-
-      setOtpRequired(false);
-      setPendingUser(null);
-
-      return { success: true };
-    } catch (error) {
-      console.error('Login failed:', error);
-      // If backend specifically asks for verification
-      if (error.response?.data?.message?.includes('verify')) {
-        setPendingUser({ email: credentials.email });
-        setOtpRequired(true);
-        return { success: false, otpRequired: true };
-      }
-      return {
-        success: false,
-        message: error.response?.data?.message || 'Login failed. Please check your credentials.',
-      };
-    } finally {
-      setLoading(false);
-    }
+  const readStoredUserId = () => {
+    const storedUser = readStoredJson('auraops_user');
+    return storedUser?.userId || storedUser?.userID || storedUser?.user_id || storedUser?.id || storedUser?._id || null;
   };
 
-  // ------------------- SIGNUP -------------------
+  const persistAuthState = ({ accessToken, refreshToken: nextRefreshToken, user: nextUser, meta: nextMeta = null }) => {
+    setToken(accessToken);
+    setRefreshToken(nextRefreshToken);
+    setUser(nextUser);
+    setMeta(nextMeta);
+    storeAuthTokens({ accessToken, refreshToken: nextRefreshToken });
+    localStorage.setItem('auraops_user', JSON.stringify(nextUser));
+    localStorage.setItem('auraops_meta', JSON.stringify(nextMeta));
+  };
+
+  const resolveUserId = (responseData, tokenValue) => {
+    return (
+      responseData?.userId ||
+      responseData?.userID ||
+      responseData?.user_id ||
+      responseData?.id ||
+      responseData?._id ||
+      responseData?.user?._id ||
+      responseData?.user?.id ||
+      responseData?.user?.userId ||
+      responseData?.user?.userID ||
+      responseData?.user?.user_id ||
+      user?.userId ||
+      user?.userID ||
+      user?.user_id ||
+      user?.id ||
+      user?._id ||
+      readStoredUserId() ||
+      getUserIdFromToken(tokenValue)
+    );
+  };
+
+  const fetchMeta = async (userIdOverride) => {
+    const userId = userIdOverride || getUserIdFromToken();
+    if (!userId) {
+      throw new Error('User ID not found in token');
+    }
+
+    const response = await getMeta(userId);
+    const metaData = response.data;
+    setMeta(metaData);
+    localStorage.setItem('auraops_meta', JSON.stringify(metaData));
+    return metaData;
+  };
+
+  useEffect(() => {
+    const syncStoredTokens = () => {
+      setToken(getStoredAccessToken());
+      setRefreshToken(getStoredRefreshToken());
+      setUser(readStoredJson('auraops_user'));
+      setMeta(readStoredJson('auraops_meta'));
+    };
+
+    window.addEventListener('auraops-auth-token-change', syncStoredTokens);
+    return () => window.removeEventListener('auraops-auth-token-change', syncStoredTokens);
+  }, []);
+
+  // ------------------- SIGNUP (SEND OTP ONLY) -------------------
   const signup = async (data) => {
     setLoading(true);
     try {
-      await registerApi(data);
-      const userToSave = { email: data.email, name: data.name || null };
-      setPendingUser(userToSave);
+      await registerUser({ email: data.email });
+
+      // store full data temporarily
+      setPendingUser(data);
       setOtpRequired(true);
-      return { success: true, otpRequired: true, message: 'OTP sent to your email' };
+
+      return { success: true };
     } catch (error) {
-      console.error('Signup failed:', error);
       return {
         success: false,
-        message: error.response?.data?.message || 'Signup failed. Please try again.',
+        message: error.response?.data?.message || 'Failed to send OTP',
       };
     } finally {
       setLoading(false);
     }
   };
 
-  // ------------------- VERIFY OTP -------------------
-  const verifyOtp = async (otp) => {
-  if (!pendingUser) {
-    return { success: false, message: 'No user pending verification' };
-  }
+  const login = async (data) => {
+    setLoading(true);
+    try {
+      const response = await loginUser({
+        email: data.email,
+        password: data.password,
+      });
 
-  setLoading(true);
-  try {
-    await verifyOtpApi({
-      email: pendingUser.email,
-      otp,
-    });
+      const { accessToken, refreshToken: nextRefreshToken } = extractAuthTokens(response.data);
+      if (!accessToken || !nextRefreshToken) {
+        return {
+          success: false,
+          message: response.data?.message || 'Login failed',
+        };
+      }
 
-    setOtpRequired(false);
-    setPendingUser(null);
+      const userId = resolveUserId(response.data, accessToken);
+      const userData = {
+        userId,
+        email: response.data?.email || response.data?.user?.email || data.email,
+        name: response.data?.name || response.data?.user?.name || '',
+      };
 
-    return {
-      success: true,
-      message: 'Account verified successfully. Please login.',
-    };
-  } catch (error) {
-    console.error('OTP verification failed:', error);
+      persistAuthState({ accessToken, refreshToken: nextRefreshToken, user: userData });
 
-    return {
-      success: false,
-      message: error.response?.data?.message || 'OTP verification failed.',
-    };
-  } finally {
-    setLoading(false);
-  }
-};
-  // ------------------- LOGOUT -------------------
-  const logout = () => {
-    setToken(null);
-    setUser(null);
-    setPendingUser(null);
-    setOtpRequired(false);
-    localStorage.removeItem('auraops_token');
-    localStorage.removeItem('auraops_user');
+      try {
+        const metaData = await fetchMeta(userId);
+        return { success: true, meta: metaData };
+      } catch (metaError) {
+        console.error('Failed to fetch meta data after login:', metaError);
+        return {
+          success: true,
+          meta: null,
+          metaError: metaError.response?.data?.message || 'Unable to fetch onboarding data',
+        };
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const isAuthenticated = !!token;
+  // ------------------- VERIFY OTP (CREATE + LOGIN) -------------------
+  const verifyOtp = async (otp) => {
+    if (!pendingUser) {
+      return { success: false, message: 'No signup data found' };
+    }
+
+    setLoading(true);
+    try {
+      const response = await verifyOtpApi({
+        email: pendingUser.email,
+        otp,
+        name: pendingUser.name,
+        password: pendingUser.password,
+      });
+
+      const { accessToken, refreshToken: nextRefreshToken } = extractAuthTokens(response.data);
+      if (!accessToken || !nextRefreshToken) {
+        return {
+          success: false,
+          message: response.data?.message || 'OTP verification failed',
+        };
+      }
+
+      const userId = resolveUserId(response.data, accessToken);
+      const userData = {
+        userId,
+        email: response.data.email || response.data.user?.email,
+        name: response.data.name || response.data.user?.name,
+      };
+
+      persistAuthState({ accessToken, refreshToken: nextRefreshToken, user: userData });
+
+      // cleanup
+      setOtpRequired(false);
+      setPendingUser(null);
+
+      try {
+        const metaData = await fetchMeta(userId);
+        return { success: true, meta: metaData };
+      } catch (metaError) {
+        console.error('Failed to fetch meta data:', metaError);
+        return {
+          success: true,
+          meta: null,
+          metaError: metaError.response?.data?.message || 'Unable to fetch onboarding data',
+        };
+      }
+    } catch (error) {
+      return {
+        success: false,
+        message: error.response?.data?.message || 'OTP verification failed',
+      };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const logout = () => {
+    setToken(null);
+    setRefreshToken(null);
+    setUser(null);
+    setMeta(null);
+    setOtpRequired(false);
+    setPendingUser(null);
+    clearAuthStorage();
+  };
 
   return (
     <AuthContext.Provider
       value={{
-        user,
-        token,
-        loading,
+        signup,
+        login,
+        verifyOtp,
+        fetchMeta,
         otpRequired,
         pendingUser,
-        login,
-        signup,
-        verifyOtp,
+        loading,
+        user,
+        meta,
+        token,
+        refreshToken,
+        isAuthenticated: Boolean(token),
         logout,
-        isAuthenticated,
       }}
     >
       {children}
@@ -148,8 +247,4 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) throw new Error('useAuth must be used within an AuthProvider');
-  return context;
-};
+export const useAuth = () => useContext(AuthContext);

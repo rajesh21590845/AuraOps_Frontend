@@ -27,23 +27,26 @@ export default function LoginPage() {
 
   // ---------------- LOGIN ----------------
   const onSubmit = async (data) => {
-  setLoading(true)
-  try {
-    const result = await login(data)
-    if (result.success) {
-      toast.success('Welcome back!')
-      navigate(from, { replace: true })
+    setLoading(true)
+    try {
+      const result = await login({
+        email: data.email,
+        password: data.password,
+      })
+      if (result.success) {
+        toast.success('Welcome back!')
+        navigate(from, { replace: true })
+      }
+    } catch (err) {
+      const message = err.response?.data?.message || ''
+      if (err.response?.status === 403 || message.toLowerCase().includes('verify')) {
+        toast.error('Please verify your account first. Check your email for the OTP.')
+      } else {
+        toast.error(message || 'Login failed')
+      }
     }
-  } catch (err) {
-    if (err.response?.status === 403 || err.response?.data?.message.includes('verify')) {
-      setMode('verify-otp')
-      toast.error('Please verify your account first. Check your email for the OTP.')
-    } else {
-      toast.error(err.response?.data?.message || 'Login failed')
-    }
+    setLoading(false)
   }
-  setLoading(false)
-}
 
   // ---------------- OTP VERIFICATION ----------------
   const handleOtpSubmit = async (e) => {
